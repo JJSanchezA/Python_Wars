@@ -1,4 +1,4 @@
-# Listados de archivos gráficos usados para el juego.
+# Rutas de archivos gráficos usados para el juego.
 
 # Gráfico de Ties
 grf_tief = 'data/tie.png'

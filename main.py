@@ -8,7 +8,7 @@ from graphics import *
 alto_pantalla = 800
 ancho_pantalla = 600
 
-# Preparamos las listas y variables de gŕaficos
+# Preparamos las listas y variables de gráficos
 img_xwing_lista = []
 explosion_bites = []
 
