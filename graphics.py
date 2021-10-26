@@ -42,7 +42,7 @@ grf_lst_xwing = ['data/xwing0000.png',
                 'data/xwing0022.png',
                 'data/xwing0023.png',
                 'data/xwing0024.png',
-                'data/xwing0025.png'
+                'data/xwing0025.png',
                 'data/xwing0026.png',
                 'data/xwing0027.png',
                 'data/xwing0028.png',
