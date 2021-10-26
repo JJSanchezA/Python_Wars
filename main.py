@@ -3,6 +3,7 @@ import random
 import sys
 import pygame
 from graphics import *
+import sounds
 
 # Datos de pantalla
 alto_pantalla = 800
@@ -22,6 +23,11 @@ img_corveta = None
 laser_verde = None
 laser_rojo = None
 fondo = None
+
+# Preparamos las variables para cargar los sonidos
+snd_laser_empire = None
+snd_laser_rebels = None
+snd_explosion = None
 
 # Definimos la variables de configuración del juego.
 desplazamiento_de_fondo = 0
@@ -91,12 +97,16 @@ def dibujar_lista_jugadores():
 def actualiza_animacion_direccion_jugador(jugador, valor):
     # Miramos el tiempod de animacion
     if valor == "derecha":
-        if jugador[4] < 30: jugador[4] += 1
+        if jugador[4] < 30:
+            jugador[4] += 1
     elif valor == "izquierda":
-        if jugador[4] > 0 : jugador[4] -= 1
-    elif valor == "centro" :
-        if jugador[4] < 15: jugador[4] += 1
-        elif jugador[4] > 15:  jugador[4] -= 1
+        if jugador[4] > 0:
+            jugador[4] -= 1
+    elif valor == "centro":
+        if jugador[4] < 15:
+            jugador[4] += 1
+        elif jugador[4] > 15:
+            jugador[4] -= 1
     jugador[0] = img_xwing_lista[jugador[4]]
 
 
@@ -135,8 +145,8 @@ def chequea_colision_impactos(lista_objetos, lista_lasers_rojos):
                 ancho_nave = objeto[0].get_width()
                 if (laser[1] - objeto[1] > 0) and (laser[1] - objeto[1] < ancho_nave):
                     nueva_explosion(objeto[1], objeto[2])
-                    effect = pygame.mixer.Sound('data/ExplosionFighter1.wav')
-                    effect.play()
+                    # y con sonido!
+                    snd_explosion.play()
                     lista_objetos.remove(objeto)
                     # Veo qué jugador disparó el laser
                     id_player = laser[3]
@@ -151,15 +161,15 @@ def chequea_colision_impactos(lista_objetos, lista_lasers_rojos):
 def chequea_impacto_en_jugador(lst_jugadores, lst_lasers_verdes):
     # Chequeamos para cada laser
     for laser in lst_lasers_verdes:
-        for jugador in lst_jugadores:
+        for _jugador in lst_jugadores:
             # Chequeo altura
-            if abs((jugador[2] - laser[2])) < 10:
-                ancho_nave = jugador[0].get_width()
-                if (laser[1] - jugador[1] > 0) and (laser[1] - jugador[1] < ancho_nave):
-                    nueva_explosion(jugador[1], jugador[2])
-                    effect = pygame.mixer.Sound('data/ExplosionFighter1.wav')
-                    effect.play()
-                    lista_jugadores.remove(jugador)
+            if abs((_jugador[2] - laser[2])) < 10:
+                ancho_nave = _jugador[0].get_width()
+                if (laser[1] - _jugador[1] > 0) and (laser[1] - _jugador[1] < ancho_nave):
+                    nueva_explosion(_jugador[1], _jugador[2])
+                    # y con sonido!
+                    snd_explosion.play()
+                    lista_jugadores.remove(_jugador)
 
 
 # ------------------------------ Actualiza lista aparación enemigos ----------------------------------- #
@@ -196,8 +206,7 @@ def dispara_laser(posx, posy, lista_objetos, player):
         # Marco saturación de disparo
         saturacion_disparo_player[player-1] = 0
         # Emito sonido
-        effect = pygame.mixer.Sound('data/xfire.ogg')
-        effect.play()
+        snd_laser_rebels.play()
 
 
 # ------------------------------ enemigos disparan un láser ------------------------------------------- #
@@ -206,8 +215,7 @@ def disparar_laser_enemigos(posx, posy, lista_objetos):
     lista_objetos.append([laser_verde, posx + 15, posy + 15])
     lista_objetos.append([laser_verde, posx + 21, posy + 15])
     # Emito sonido
-    effect = pygame.mixer.Sound('data/EmpireLaserTurbo.wav')
-    effect.play()
+    snd_laser_empire.play()
 
 
 # ------------------------------ Control de tiempos de disparo / enfriamiento de armas ---------------- #
@@ -270,7 +278,7 @@ def cargar_graficos_juego():
     # Lo vamos a hacer en un único bloque TRY. Si falla la carga, no arrancamos el juego.
     # La idea es no arrancar el juego con gráficos no cargados.
     global img_tief, img_shuttle, img_stroopers, img_falconm, img_corveta, laser_verde, laser_rojo, fondo
-    graficos_cargados = True
+    graficos_ok = True
     try:
         # Cargamos animaciones de los PJs
         for x_grp in range(0, len(grf_lst_xwing)):
@@ -290,17 +298,65 @@ def cargar_graficos_juego():
     except FileNotFoundError:
         # Si hay algún error, no cargamos el juego!
         print("Ha ocurrido una excepción grafica")
-        graficos_cargados = False
+        graficos_ok = False
     finally:
         # Devolvemos el resultado de la carga de gráficos
-        return graficos_cargados
+        return graficos_ok
 
 
-# ------------------------------ MAIN ----------------------------------------------------------------- #
-# Primero intentamos cargar los gráficos.
-graficos_correctos = cargar_graficos_juego()
-# Si no se han cargado, no creamos la GUI, salimos directamente.
-if graficos_correctos:
+# ------------------------------ Cargador de sonidos del juego ---------------------------------------- #
+def cargar_sonidos():
+    sonidos_ok = True
+    global snd_laser_rebels, snd_laser_empire, snd_explosion
+    # Intentamos cargar los archivos de sonido.
+    try:
+        snd_laser_rebels = pygame.mixer.Sound(sounds.snd_disparo_rebeldes)
+        snd_laser_empire = pygame.mixer.Sound(sounds.snd_disparo_imperio)
+        snd_explosion = pygame.mixer.Sound(sounds.snd_explosion)
+    except FileNotFoundError:
+        print("Archivos de sonido no encontrados.")
+        sonidos_ok = False
+    finally:
+        # Devolvemos si hubo éxito o no.
+        return sonidos_ok
+
+
+# ------------------------------ Cargador de música del juego ----------------------------------------- #
+def cargar_musica_y_play():
+    musica_ok = True
+    # Intentamos cargar el archivo de música.
+    try:
+        pygame.mixer.music.load(sounds.music_environment)
+    except FileNotFoundError:
+        musica_ok = False
+        print("Archivo de música no encontrado.")
+    else:
+        # Si sí hemos cargado la música, la activamos
+        pygame.mixer.music.play(0)
+    # Devolvemos si hubo éxito o no.
+    return musica_ok
+
+
+# ----------------------------------------------------------------------------------------------------- #
+# -                                        MAIN                                                       - #
+# ----------------------------------------------------------------------------------------------------- #
+# Inicializamos en el entorno de Pygame
+pygame.init()
+# También el uso de letras
+pygame.font.init()
+myfont = pygame.font.SysFont('Comic Sans MS', size_letra)
+# Texto de la ventana
+pygame.display.set_caption('Python Wars!')
+# Ahora intentamos cargar los gráficos.
+graficos_cargados = cargar_graficos_juego()
+# Intentamos cargar los sonidos.
+sonidos_cargados = cargar_sonidos()
+# E intentamos cargar la música ambiental
+musica_cargada = cargar_musica_y_play()
+# Si no se han cargado, no creamos el canvas, salimos directamente.
+# Lo mismo si no se han cargado los sonidos.
+# En el caso de la música.... jugaremos sin música.
+if graficos_cargados and sonidos_cargados:
     # Creamos las listas para almacenar objetos del juego.
     # Lista para control de jugadores humanos
     img_xwing = img_xwing_lista[2]
@@ -315,22 +371,6 @@ if graficos_correctos:
     lista_naves_adorno = []
     lista_explosiones = []
     lista_jugadores = []
-    # Inicializamos en el entorno de Pygame
-    pygame.init()
-    # También el uso de letras
-    pygame.font.init()
-    myfont = pygame.font.SysFont('Comic Sans MS', size_letra)
-    # Texto de la ventana
-    pygame.display.set_caption('Python Wars!')
-    # Un poco de música emotiva
-    try:
-        pygame.mixer.music.load('data/backgroundmusic.ogg')
-    except FileNotFoundError:
-        print("Archivo de música no encontrado.")
-    else:
-        # Le damos al play a la música!
-        pygame.mixer.music.play(0)
-
     # Iniciamos la pantalla
     screen = pygame.display.set_mode((alto_pantalla, ancho_pantalla))
     # Creamos jugador_1 con img_xwing, posx, posy, id player 1 y estado animación 15.
@@ -438,5 +478,13 @@ if graficos_correctos:
                 pygame.display.quit()
                 sys.exit()
 else:
-    # Salimos por que no se han cargado bien los gráficos
-    print("Error al cargar los gráficos el juego. Saliendo...")
+    if not graficos_cargados:
+        # Salimos por que no se han cargado bien los gráficos
+        print("Error al cargar los gráficos el juego.")
+    if not sonidos_cargados:
+        # Salimos por que no se han cargado bien los sonidos
+        print("Error al cargar los sonidos el juego.")
+    print("Saliendo....")
+# La música es opcional, pero informamos de que no está cargada.
+if not musica_cargada:
+    print("Error al cargar la música del juego.")
